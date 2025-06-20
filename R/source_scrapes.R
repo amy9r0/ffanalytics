@@ -1288,6 +1288,7 @@ scrape_fantasydata = function(pos = NULL, season = NULL, week = NULL,
     scrape_week = week
   }
 
+  pos = tolower(pos)
   message("\nThe FantasyData scrape uses a 2 second delay between pages")
 
   base_link = paste0("https://fantasydata.com/nfl/fantasy-football-leaders")
@@ -1298,10 +1299,12 @@ scrape_fantasydata = function(pos = NULL, season = NULL, week = NULL,
     scrape_link_pps = paste0(baselink, "?scope=season&sp=", season,"_REG&position=", pos, "&scoring=fpts_ppr&order_by=fpts_ppr&sort_dir=desc")
 
     Sys.sleep(2L)
+    cat(paste0("Scraping ", pos, " projections from"), scrape_link_pps, sep = "\n  ")
+    
     scrape_link_ppg = paste0(baselink, "?scope=season&sp=", season, "_REG&position=", pos, "&scoring=fpts_ppr&order_by=fpts_ppr_per_gp&sort_dir=desc")
     
-    Sys.sleep(2L) # temporary, until I get an argument for honoring the crawl delay
-    cat(paste0("Scraping ", pos, " projections from"), scrape_link, sep = "\n  ")
+    Sys.sleep(2L)
+    cat(paste0("Scraping ", pos, " projections from"), scrape_link_ppg, sep = "\n  ")
 
     html_page = site_session %>%
       session_jump_to(scrape_link) %>%
@@ -1371,13 +1374,9 @@ scrape_fantasydata = function(pos = NULL, season = NULL, week = NULL,
 }
   # create case handling for season
   # create case handling for week
-  # create handling for filter by top 100 pts/g
-  # create handling for filter by top 100 pts
-  # create url strings
   # pull info from table on both urls 
   # merge tables removing duplicates
-  # wait 2 s
-  #
+  
 }
 
 # Depreceated ----
@@ -1387,7 +1386,6 @@ scrape_yahoo = function(pos = NULL, season = NULL, week = NULL,
     "\nThe Yahoo scrape is no longer supported because they now use FantasyPros projections"
     )
 }
-
 
 
 
