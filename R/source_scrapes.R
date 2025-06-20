@@ -1274,8 +1274,101 @@ scrape_fantasydata = function(pos = NULL, season = NULL, week = NULL,
   message(
     "\nThe FantasyData scrape is behind a paywall and is not supported at this time"
       )
-  # set up session
+
+  if(is.null(season)) {
+    season = get_scrape_year()
+  }
+  if(is.null(week)) {
+    week = get_scrape_week()
+  }
+
+  if(week %in% c(0, "ros")) {
+    scrape_week = "restofseason"
+  } else {
+    scrape_week = week
+  }
+
+  message("\nThe FantasyData scrape uses a 2 second delay between pages")
+
+  base_link = paste0("https://fantasydata.com/nfl/fantasy-football-leaders")
+  site_session = rvest::session(base_link)
+  
   # create case handling for positions
+  l_pos = lapply(pos, function(pos) {
+    scrape_link_pps = paste0(baselink, "?scope=season&sp=", season,"_REG&position=", pos, "&scoring=fpts_ppr&order_by=fpts_ppr&sort_dir=desc")
+
+    Sys.sleep(2L)
+    scrape_link_ppg = paste0(baselink, "?scope=season&sp=", season, "_REG&position=", pos, "&scoring=fpts_ppr&order_by=fpts_ppr_per_gp&sort_dir=desc")
+    
+    Sys.sleep(2L) # temporary, until I get an argument for honoring the crawl delay
+    cat(paste0("Scraping ", pos, " projections from"), scrape_link, sep = "\n  ")
+
+    html_page = site_session %>%
+      session_jump_to(scrape_link) %>%
+      read_html()
+
+    # Get column names
+    col_names = html_page %>%
+      html_element("#TableBase > div > div > table > thead > tr.TableBase-headTr") %>%
+      html_text2() %>%
+      strsplit("\\\n|\\\t")
+
+    col_names = grep("[A-Z]", col_names[[1]], value = TRUE)
+    col_names = rename_vec(col_names, cbs_columns)
+
+    # Get PID
+    if(pos == "DST") {
+      cbs_id = html_page %>%
+        rvest::html_elements("span.TeamName a") %>%
+        rvest::html_attr("href") %>%
+        sub(".*?([A-Z]{2,3}).*", "\\1",  .)
+    } else {
+      cbs_id = html_page %>%
+        rvest::html_elements("table > tbody > tr > td:nth-child(1) > span.CellPlayerName--long > span > a") %>%
+        rvest::html_attr("href") %>%
+        sub(".*?([0-9]+).*", "\\1", .)
+    }
+
+    # Creating and cleaning table
+    out_df = html_page %>%
+      rvest::html_element("#TableBase > div > div > table > tbody") %>%
+      rvest::html_table() %>%
+      `names<-`(col_names)
+
+    if(pos != "DST") {
+      out_df = out_df %>%
+        tidyr::extract(player, c("player", "pos", "team"),
+                       ".*?\\s{2,}[A-Z]{1,3}\\s{2,}[A-Z]{2,3}\\s{2,}(.*?)\\s{2,}(.*?)\\s{2,}(.*)") %>%
+        dplyr::mutate(src_id = cbs_id,
+                      data_src = "CBS",
+                      id = player_ids$id[match(src_id, player_ids$cbs_id)])
+      out_df$id = get_mfl_id(
+        id_col = cbs_id,
+        player_name = out_df$player,
+        pos = out_df$pos,
+        team = out_df$team
+      )
+    } else {
+      out_df$team = cbs_id
+      out_df$data_src = "CBS"
+      dst_ids = ff_player_data[ff_player_data$position == "Def", c("id", "team")]
+      dst_ids$team[dst_ids$team == "OAK"] = "LV"
+      out_df$id = dst_ids$id[match(cbs_id, dst_ids$team)]
+      out_df$src_id = player_ids$cbs_id[match(out_df$id, player_ids$id)]
+    }
+
+    # Misc cleanup before done
+    out_df[out_df == "—"] = NA
+
+    idx = names(out_df) %in% c("id", "src_id")
+    out_df[!idx] = type.convert(out_df[!idx], as.is = TRUE)
+    out_df[out_df$site_pts > 0,]
+  })
+  names(l_pos) = pos
+  attr(l_pos, "season") = season
+  attr(l_pos, "week") = week
+  l_pos
+}
   # create case handling for season
   # create case handling for week
   # create handling for filter by top 100 pts/g
