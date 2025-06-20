@@ -1274,6 +1274,17 @@ scrape_fantasydata = function(pos = NULL, season = NULL, week = NULL,
   message(
     "\nThe FantasyData scrape is behind a paywall and is not supported at this time"
       )
+  # set up session
+  # create case handling for positions
+  # create case handling for season
+  # create case handling for week
+  # create handling for filter by top 100 pts/g
+  # create handling for filter by top 100 pts
+  # create url strings
+  # pull info from table on both urls 
+  # merge tables removing duplicates
+  # wait 2 s
+  #
 }
 
 # Depreceated ----
