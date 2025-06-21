@@ -1306,18 +1306,21 @@ scrape_fantasydata = function(pos = NULL, season = NULL, week = NULL,
     Sys.sleep(2L)
     cat(paste0("Scraping ", pos, " projections from"), scrape_link_ppg, sep = "\n  ")
 
-    html_page = site_session %>%
-      session_jump_to(scrape_link) %>%
+    html_page_pps = site_session %>%
+      session_jump_to(scrape_link_pps) %>%
+      read_html()
+
+    html_page_ppg = site_session %>%
+      session_jump_to(scrape_link_ppg) %>%
       read_html()
 
     # Get column names
-    col_names = html_page %>%
-      html_element("#TableBase > div > div > table > thead > tr.TableBase-headTr") %>%
+    col_names = html_page_pps %>%
+      html_element("tr.header") %>%
       html_text2() %>%
       strsplit("\\\n|\\\t")
 
-    col_names = grep("[A-Z]", col_names[[1]], value = TRUE)
-    col_names = rename_vec(col_names, cbs_columns)
+    col_names = rename_vec(col_names, fantasydata_columns)
 
     # Get PID
     if(pos == "DST") {
